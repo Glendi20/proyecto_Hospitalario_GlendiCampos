@@ -1,0 +1,7 @@
+# Herramienta externa usada solo localmente para renderizar los diagramas PlantUML.
+# Se descarga con el comando indicado en README.md; no es necesario versionarla.
+tools/plantuml.jar
+
+# Archivos temporales del sistema operativo
+Thumbs.db
+.DS_Store
