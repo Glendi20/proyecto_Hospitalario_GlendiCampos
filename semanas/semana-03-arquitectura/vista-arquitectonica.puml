@@ -1,0 +1,60 @@
+@startuml vista_arquitectonica
+title Vista Arquitectónica de Alto Nivel\nMódulo Pacientes y sus dependencias con el HIS
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+left to right direction
+
+actor "Recepcionista /\nPersonal Clínico" as USR
+
+package "Frontend (SPA / Vistas)" {
+  [UI Pacientes] as UI
+}
+
+package "Módulo Pacientes" {
+  [PatientController\n(API)] as CTRL
+  [PatientService\n(Aplicación)] as SERV
+  [PatientRepository\n(Persistencia)] as REPO
+  database "Base de Datos\nPacientes" as DB
+}
+
+package "Módulos transversales del HIS" {
+  [AuthService\n(RBAC / Gestión de usuarios)] as AUTH
+  [TenantService\n(Multi-tenencia)] as TENANT
+  [AuditService\n(Gobernanza y auditoría)] as AUDIT
+}
+
+package "Módulos consumidores" {
+  [Módulo de Citas\ny Agenda] as CITAS
+  [Módulo de Admisión\nHospitalaria] as ADMISION
+  [Expediente Médico\nElectrónico] as EMR
+}
+
+USR --> UI : usa
+UI --> CTRL : HTTP/JSON
+
+CTRL --> SERV
+SERV --> REPO
+REPO --> DB
+
+SERV ..> AUTH : valida permiso\n(RBAC)
+SERV ..> TENANT : resuelve\ntenant_id
+SERV ..> AUDIT : registra evento
+
+CITAS ..> CTRL : consulta paciente\npor DPI/expediente
+ADMISION ..> CTRL : consulta/crea\npaciente
+EMR ..> CTRL : referencia\npaciente
+
+note bottom of REPO
+  El acceso a datos se abstrae mediante
+  una interfaz de repositorio (ver semana 4),
+  permitiendo cambiar el motor de persistencia
+  sin afectar PatientService.
+end note
+
+note right of AUTH
+  Módulo compartido: también es
+  usado por Citas, Admisión y EMR
+  para autorizar sus propias operaciones.
+end note
+
+@enduml
