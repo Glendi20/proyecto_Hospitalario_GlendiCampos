@@ -1,0 +1,26 @@
+== SqlPatientRepository (producción) ==
+  registrar() paciente 1 -> id=1
+  [OK] registrar() duplicado rechazado con DuplicatePatientException: DPI 1234567890101 ya registrado.
+  buscar() sin coincidencias -> array(0)
+  [OK] contrato respetado (array, nunca null)
+  actualizarSeguro() con permiso -> OK
+  actualizarSeguro() SIN permiso -> [OK] rechazado (Excepción E3)
+
+== InMemoryPatientRepository (DESPUÉS - correcto, sustituible) ==
+  registrar() paciente 1 -> id=1
+  [OK] registrar() duplicado rechazado con DuplicatePatientException: DPI 1234567890101 ya registrado.
+  buscar() sin coincidencias -> array(0)
+  [OK] contrato respetado (array, nunca null)
+  actualizarSeguro() con permiso -> OK
+  actualizarSeguro() SIN permiso -> [OK] rechazado (Excepción E3)
+
+== InMemoryPatientRepositoryViolatingLSP (ANTES - viola LSP) ==
+  registrar() paciente 1 -> id=1
+  [VIOLACION LSP] tipo de excepción inesperado: RuntimeException (Paciente repetido)
+  [VIOLACION LSP] buscar() lanzó una excepción inesperada: InMemoryPatientRepositoryViolatingLSP::findByCriterio(): Return value must be of type array, null returned
+  actualizarSeguro() con permiso -> OK
+  actualizarSeguro() SIN permiso -> [OK] rechazado (Excepción E3)
+
+Conclusión: las dos primeras implementaciones son intercambiables sin cambiar
+PatientServiceDemo (cumplen LSP). La tercera rompe el contrato (tipo de retorno y
+tipo de excepción), evidenciando por qué NO sería sustituible en producción.
