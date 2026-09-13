@@ -1,0 +1,87 @@
+@startuml 03_secuencia
+title Diagrama de Secuencia\nRegistro, Búsqueda y Actualización Segura de Paciente
+
+actor "Recepcionista /\nPersonal Clínico" as USR
+boundary "UI Formulario\nde Pacientes" as UI
+control "PatientController" as CTRL
+control "AuthService\n(RBAC)" as AUTH
+control "PatientService\n(Validaciones)" as SERV
+database "PatientRepository" as REPO
+control "AuditService" as AUDIT
+
+USR -> UI : ingresarCriterioBusqueda(dpi/nombre)
+UI -> CTRL : buscarPaciente(criterio)
+CTRL -> REPO : findByCriterio(criterio)
+REPO --> CTRL : resultado
+
+alt Paciente encontrado
+  CTRL --> UI : mostrarDetalle(paciente)
+  UI --> USR : detalle del paciente
+
+  opt Usuario solicita actualizar datos
+    USR -> UI : editarDatos(cambios)
+    UI -> CTRL : solicitarActualizacion(idPaciente, cambios)
+    CTRL -> AUTH : validarPermiso(usuario, "editar_paciente")
+
+    alt Permiso concedido
+      AUTH --> CTRL : autorizado
+      CTRL -> SERV : validarDatos(cambios)
+
+      alt Datos válidos
+        SERV --> CTRL : ok
+        CTRL -> REPO : actualizar(idPaciente, cambios)
+        REPO --> CTRL : confirmacion
+        CTRL -> AUDIT : registrarEvento("actualizacion", usuario, idPaciente)
+        AUDIT --> CTRL : ack
+        CTRL --> UI : mostrarConfirmacion()
+        UI --> USR : "Paciente actualizado correctamente"
+      else Datos inválidos
+        SERV --> CTRL : errores[]
+        CTRL --> UI : mostrarErroresValidacion(errores)
+        UI --> USR : mensaje de error de validación
+      end
+
+    else Permiso denegado
+      AUTH --> CTRL : denegado
+      CTRL -> AUDIT : registrarIntentoFallido(usuario, idPaciente)
+      AUDIT --> CTRL : ack
+      CTRL --> UI : mostrarError("Acceso denegado")
+      UI --> USR : mensaje de error 403
+    end
+  end
+
+else Paciente no encontrado
+  CTRL --> UI : sinResultados()
+  UI --> USR : "No se encontraron resultados"
+
+  opt Usuario decide registrar nuevo paciente
+    USR -> UI : ingresarDatosNuevoPaciente(datos)
+    UI -> CTRL : registrarPaciente(datos)
+    CTRL -> SERV : validarDatos(datos)
+
+    alt Datos válidos
+      CTRL -> REPO : existeDuplicado(dpi)
+
+      alt No duplicado
+        REPO --> CTRL : noExiste
+        CTRL -> REPO : guardar(nuevoPaciente)
+        REPO --> CTRL : pacienteCreado
+        CTRL -> AUDIT : registrarEvento("registro", usuario, idPaciente)
+        AUDIT --> CTRL : ack
+        CTRL --> UI : mostrarConfirmacionRegistro()
+        UI --> USR : "Paciente registrado correctamente"
+      else Duplicado
+        REPO --> CTRL : yaExiste
+        CTRL --> UI : mostrarError("DPI ya registrado")
+        UI --> USR : mensaje de error
+      end
+
+    else Datos inválidos
+      SERV --> CTRL : errores[]
+      CTRL --> UI : mostrarErroresValidacion(errores)
+      UI --> USR : mensaje de error de validación
+    end
+  end
+end
+
+@enduml
