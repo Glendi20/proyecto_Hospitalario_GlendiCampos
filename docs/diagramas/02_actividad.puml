@@ -1,0 +1,77 @@
+@startuml 02_actividad
+title Diagrama de Actividad\nRegistro, Búsqueda y Actualización Segura de Paciente
+
+skinparam activity {
+  BackgroundColor<<user>> #E8F0FE
+  BackgroundColor<<system>> #FFF3CD
+  BackgroundColor<<audit>> #E6F4EA
+  BorderColor #666666
+}
+skinparam ActivityDiamondBackgroundColor #FFFFFF
+legend right
+  |= Color |= Responsable |
+  |<#E8F0FE>| Recepcionista / Personal Clínico |
+  |<#FFF3CD>| Sistema (HIS) |
+  |<#E6F4EA>| Sistema de Auditoría |
+endlegend
+
+start
+:(Usuario) Ingresar criterio de búsqueda\n(DPI o nombre);<<user>>
+:(Sistema) Buscar paciente en base de datos;<<system>>
+
+if (¿Paciente encontrado?) then (no)
+  if (¿Desea registrar nuevo paciente?) then (sí)
+    :(Usuario) Ingresar datos del nuevo paciente;<<user>>
+    :(Sistema) Validar formato y campos obligatorios;<<system>>
+    if (¿Datos válidos?) then (no)
+      :(Sistema) Mostrar errores de validación;<<system>>
+      note right #FFAAAA: Excepción E1\nDatos inválidos o incompletos
+      stop
+    else (sí)
+      :(Sistema) Verificar duplicidad por DPI;<<system>>
+      if (¿DPI ya registrado?) then (sí)
+        :(Sistema) Rechazar registro por duplicado;<<system>>
+        note right #FFAAAA: Excepción E2\nPaciente duplicado
+        stop
+      else (no)
+        :(Sistema) Guardar nuevo paciente;<<system>>
+        :(Auditoría) Registrar evento\n"Alta de paciente";<<audit>>
+        :(Sistema) Mostrar confirmación de registro;<<system>>
+        stop
+      endif
+    endif
+  else (no)
+    :(Sistema) Finalizar sin resultados;<<system>>
+    stop
+  endif
+else (sí)
+  :(Sistema) Mostrar detalle del paciente;<<system>>
+  if (¿Desea actualizar datos?) then (no)
+    :(Sistema) Finalizar consulta;<<system>>
+    stop
+  else (sí)
+    :(Usuario) Solicitar edición de campos;<<user>>
+    :(Sistema) Validar permiso de edición (RBAC);<<system>>
+    if (¿Permiso concedido?) then (no)
+      :(Auditoría) Registrar intento\nde acceso denegado;<<audit>>
+      :(Sistema) Mostrar error\n"Acceso denegado";<<system>>
+      note right #FFAAAA: Excepción E3\nPermiso denegado
+      stop
+    else (sí)
+      :(Usuario) Editar campos del paciente;<<user>>
+      :(Sistema) Validar datos actualizados;<<system>>
+      if (¿Datos válidos?) then (no)
+        :(Sistema) Mostrar errores de validación;<<system>>
+        note right #FFAAAA: Excepción E1\nDatos inválidos o incompletos
+        stop
+      else (sí)
+        :(Sistema) Guardar cambios;<<system>>
+        :(Auditoría) Registrar evento\n"Actualización de paciente";<<audit>>
+        :(Sistema) Mostrar confirmación\nde actualización;<<system>>
+        stop
+      endif
+    endif
+  endif
+endif
+
+@enduml
