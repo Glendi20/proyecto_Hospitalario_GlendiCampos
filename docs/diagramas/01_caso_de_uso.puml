@@ -1,0 +1,51 @@
+@startuml 01_caso_de_uso
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+title Diagrama de Casos de Uso\nMódulo: Pacientes - Registro, Búsqueda y Actualización Segura
+
+actor "Recepcionista" as REC
+actor "Personal Clínico\n(Médico / Enfermería)" as CLIN
+actor "Sistema de Auditoría" as AUD <<system>>
+
+rectangle "Sistema de Gestión Hospitalaria (HIS)\nMódulo de Pacientes" {
+  usecase "UC-01\nRegistrar Paciente" as UC1
+  usecase "UC-02\nBuscar Paciente" as UC2
+  usecase "UC-03\nActualizar Datos\ndel Paciente" as UC3
+  usecase "UC-04\nValidar Permisos\nde Edición (RBAC)" as UC4
+  usecase "UC-05\nValidar Duplicidad\nde Paciente (DPI)" as UC5
+  usecase "UC-06\nRegistrar Evento\nen Bitácora" as UC6
+}
+
+REC --> UC1
+REC --> UC2
+CLIN --> UC2
+CLIN --> UC3
+REC --> UC3
+
+UC1 ..> UC5 : <<include>>
+UC1 ..> UC6 : <<include>>
+UC3 ..> UC4 : <<include>>
+UC3 ..> UC6 : <<include>>
+UC6 --> AUD
+
+note right of UC4
+  Verifica que el usuario tenga
+  el rol/permiso autorizado
+  antes de permitir la edición.
+end note
+
+note right of UC5
+  Verifica que el número de
+  identificación (DPI, dato
+  ficticio) no esté ya
+  registrado en el sistema.
+end note
+
+note bottom of UC2
+  Objetivo: localizar un paciente
+  existente por criterio (DPI o
+  nombre) para consulta o edición.
+end note
+
+@enduml
